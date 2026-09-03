@@ -20,13 +20,13 @@ class GondorAITests(unittest.TestCase):
     def test_ai_respects_economy(self):
         self.game.gondor.gold = 0
         self.assertFalse(self.ai.try_recruit(self.game, pressure=4))
-        self.assertEqual(self.game.gondor.queue, [])
+        self.assertEqual(self.game.population("gondor"), 0)
 
-    def test_ai_places_valid_order(self):
+    def test_ai_spawns_valid_unit_immediately(self):
         self.game.gondor.gold = 500
         self.assertTrue(self.ai.try_recruit(self.game))
-        self.assertEqual(len(self.game.gondor.queue), 1)
-        self.assertEqual(self.game.gondor.queue[0].kind.faction, "gondor")
+        self.assertEqual(self.game.population("gondor"), 1)
+        self.assertEqual(self.game.units[0].kind.faction, "gondor")
 
 
 if __name__ == "__main__":

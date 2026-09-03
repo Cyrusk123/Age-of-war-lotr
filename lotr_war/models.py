@@ -47,17 +47,10 @@ class Projectile:
 
 
 @dataclass
-class RecruitOrder:
-    kind: C.UnitDef
-    remaining: float
-
-
-@dataclass
 class Army:
     faction: str
     gold: float = C.STARTING_GOLD
     base_health: float = C.BASE_MAX_HEALTH
-    queue: list[RecruitOrder] = field(default_factory=list)
     tower_timer: float = 0.0
 
 

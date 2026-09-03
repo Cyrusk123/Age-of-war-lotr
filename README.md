@@ -12,7 +12,7 @@ code at runtime; the repository does not contain external art or audio assets.
 - Mordor player versus Gondor AI in a complete win/lose match
 - Automatic movement, target acquisition, melee attacks, ranged projectiles,
   formation spacing, deaths, and bounty rewards
-- Passive gold income, training queue, costs, and 12-unit population cap
+- Passive gold income, instant recruitment, costs, and 12-unit population cap
 - Three distinct units for each faction
 - Automated defensive towers and destructible 1,800-health fortresses
 - Gondor AI that responds to pressure and army composition
@@ -68,11 +68,11 @@ python -m lotr_war
 ## Rules
 
 Gold accumulates continuously. Recruiting immediately pays a unit's cost and
-adds it to the queue; only the first queued unit trains at a time. Live and
-queued troops both count toward the population cap. Units advance and fight
-automatically. Killing an enemy awards its bounty. A fortress is attacked when
-a unit reaches the far edge of the lane. Reduce Gondor's fortress to zero
-health before Gondor destroys the Black Gate.
+spawns it at its faction's fortress with no training delay. Live troops count
+toward the population cap. Units advance and fight automatically. Killing an
+enemy awards its bounty. A fortress is attacked when a unit reaches the far
+edge of the lane. Reduce Gondor's fortress to zero health before Gondor
+destroys the Black Gate.
 
 After three minutes, **siege pressure** activates to prevent an indefinite
 midfield stalemate. Each surviving unit occupying enemy territory contributes
@@ -97,8 +97,8 @@ to `render_output/` for visual inspection.
 
 ```text
 lotr_war/config.py      Balance constants and unit definitions
-lotr_war/models.py      Units, projectiles, armies, and recruitment orders
-lotr_war/simulation.py  Economy, queues, movement, combat, towers, victory
+lotr_war/models.py      Units, projectiles, armies, and combat events
+lotr_war/simulation.py  Economy, recruitment, movement, combat, and victory
 lotr_war/ai.py          Gondor composition and recruitment decisions
 lotr_war/renderer.py    Procedural pygame artwork and user interface
 lotr_war/app.py         Window, events, controls, and screen states

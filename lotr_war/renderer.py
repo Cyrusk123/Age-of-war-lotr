@@ -178,8 +178,7 @@ class Renderer:
         self._text(screen, f"GOLD  {int(game.mordor.gold)}", self.medium_font, (233, 180, 62), 620, 620)
         self._text(screen, f"ARMY  {game.population('mordor')}/{C.POPULATION_CAP}",
                    self.medium_font, (207, 207, 193), 620, 652)
-        queue = "  ›  ".join(f"{o.kind.name} {max(0, o.remaining):.1f}s" for o in game.mordor.queue)
-        self._text(screen, "QUEUE  " + (queue or "Empty"), self.small_font, (168, 170, 163), 805, 623)
+        self._text(screen, "RECRUITMENT  INSTANT", self.small_font, (168, 170, 163), 805, 623)
         minutes, seconds = divmod(int(game.elapsed), 60)
         self._text(screen, f"BATTLE {minutes:02}:{seconds:02}", self.small_font, (168, 170, 163), 1080, 655)
         if game.elapsed >= C.SIEGE_PRESSURE_START and game.state == "playing":

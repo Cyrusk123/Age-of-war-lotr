@@ -6,7 +6,7 @@ import random
 
 from . import config as C
 from .ai import GondorAI
-from .models import Army, CombatEvent, Projectile, RecruitOrder, Unit
+from .models import Army, CombatEvent, Projectile, Unit
 
 
 class GameSimulation:
@@ -31,16 +31,14 @@ class GameSimulation:
         raise ValueError(f"Unknown faction: {faction}")
 
     def population(self, faction: str) -> int:
-        army = self.army(faction)
-        return sum(u.faction == faction for u in self.units) + len(army.queue)
+        self.army(faction)  # Validate the faction name.
+        return sum(u.faction == faction for u in self.units)
 
     def can_recruit(self, faction: str, key: str) -> tuple[bool, str]:
         kind = C.UNIT_DEFS.get(key)
         if not kind or kind.faction != faction:
             return False, "Unit unavailable"
         army = self.army(faction)
-        if len(army.queue) >= C.MAX_QUEUE:
-            return False, "Recruitment queue full"
         if self.population(faction) >= C.POPULATION_CAP:
             return False, "Population limit reached"
         if army.gold < kind.cost:
@@ -57,9 +55,9 @@ class GameSimulation:
             return False
         army, kind = self.army(faction), C.UNIT_DEFS[key]
         army.gold -= kind.cost
-        army.queue.append(RecruitOrder(kind, kind.train_time))
+        self.spawn(key)
         if faction == "mordor":
-            self.message, self.message_timer = f"Training {kind.name}", 1.2
+            self.message, self.message_timer = f"Deployed {kind.name}", 1.2
         return True
 
     def spawn(self, key: str, x: float | None = None) -> Unit:
@@ -86,7 +84,6 @@ class GameSimulation:
         self.message_timer = max(0.0, self.message_timer - dt)
         self.mordor.gold += C.PASSIVE_INCOME * dt
         self.gondor.gold += C.PASSIVE_INCOME * dt * 1.03
-        self._update_queues(dt)
         if self.ai:
             self.ai.update(self, dt)
         for unit in list(self.units):
@@ -98,15 +95,6 @@ class GameSimulation:
         self._remove_dead()
         self._update_siege_pressure(dt)
         self._check_game_over()
-
-    def _update_queues(self, dt: float) -> None:
-        for army in (self.mordor, self.gondor):
-            if not army.queue:
-                continue
-            army.queue[0].remaining -= dt
-            if army.queue[0].remaining <= 0:
-                order = army.queue.pop(0)
-                self.spawn(order.kind.key)
 
     def _nearest_enemy_ahead(self, unit: Unit) -> Unit | None:
         enemies = [u for u in self.units if u.alive and u.faction != unit.faction]

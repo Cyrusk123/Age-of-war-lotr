@@ -8,19 +8,12 @@ class EconomyTests(unittest.TestCase):
     def setUp(self):
         self.game = GameSimulation(enable_ai=False)
 
-    def test_recruitment_spends_gold_and_enters_queue(self):
+    def test_recruitment_spends_gold_and_spawns_immediately(self):
         self.assertTrue(self.game.recruit("mordor", "orc"))
         self.assertEqual(self.game.mordor.gold, C.STARTING_GOLD - 60)
-        self.assertEqual(self.game.mordor.queue[0].kind.key, "orc")
-
-    def test_training_completes_and_spawns_at_mordor_base(self):
-        self.game.recruit("mordor", "orc")
-        for _ in range(72):
-            self.game.update(1 / 60)
-        self.assertEqual(len(self.game.mordor.queue), 0)
         self.assertEqual(len(self.game.units), 1)
-        self.assertGreaterEqual(self.game.units[0].x, C.LANE_LEFT)
-        self.assertLess(self.game.units[0].x, C.LANE_LEFT + 5)
+        self.assertEqual(self.game.units[0].kind.key, "orc")
+        self.assertEqual(self.game.units[0].x, C.LANE_LEFT)
 
     def test_cannot_buy_enemy_or_unaffordable_unit(self):
         self.assertFalse(self.game.recruit("mordor", "soldier"))
@@ -28,13 +21,13 @@ class EconomyTests(unittest.TestCase):
         self.assertFalse(self.game.recruit("mordor", "orc"))
         self.assertEqual(self.game.message, "Not enough gold")
 
-    def test_population_includes_queued_units(self):
+    def test_population_cap_blocks_further_instant_spawns(self):
         self.game.mordor.gold = 10_000
-        for _ in range(C.MAX_QUEUE):
+        for _ in range(C.POPULATION_CAP):
             self.assertTrue(self.game.recruit("mordor", "orc"))
-        self.assertEqual(self.game.population("mordor"), C.MAX_QUEUE)
+        self.assertEqual(self.game.population("mordor"), C.POPULATION_CAP)
         self.assertFalse(self.game.recruit("mordor", "orc"))
-        self.assertEqual(self.game.message, "Recruitment queue full")
+        self.assertEqual(self.game.message, "Population limit reached")
 
     def test_income_is_frame_rate_independent(self):
         game_a = GameSimulation(enable_ai=False)
