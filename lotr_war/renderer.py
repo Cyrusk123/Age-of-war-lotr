@@ -231,111 +231,394 @@ class Renderer:
                             (x - 4 * scale, y - 23 * scale, 8 * scale, 46 * scale))
 
     def _draw_unit(self, screen: pygame.Surface, unit: Unit, time: float) -> None:
-        x, y = int(unit.x), C.GROUND_Y
-        phase = time * (6.5 + unit.kind.speed / 30) + unit.id * 1.7
-        bob = int(math.sin(phase) * 2)
-        stride = int(math.sin(phase) * 4)
-        size = unit.kind.size
-        mordor = unit.faction == "mordor"
-        body = (83, 94, 65) if mordor else (201, 204, 201)
-        accent = (151, 48, 30) if mordor else (52, 75, 101)
-        dark = (39, 38, 34) if mordor else (55, 66, 72)
-        metal = (125, 123, 109) if mordor else (221, 223, 211)
-        if unit.kind.is_hero:
-            body = (108, 91, 65) if mordor else (225, 220, 201)
-            accent = (225, 164, 48)
-        if unit.flash_timer > 0:
-            body = (255, 235, 210)
-        shadow_width = size * (3 if unit.kind.key in ("warg_rider", "gondor_knight") else 2)
-        pygame.draw.ellipse(screen, (26, 24, 21), (x - shadow_width // 2, y + 16, shadow_width, 9))
-        if unit.kind.key in ("warg_rider", "gondor_knight"):
-            mount = (71, 59, 47) if mordor else (151, 151, 145)
-            pygame.draw.ellipse(screen, mount, (x - 27, y - 10 + bob, 52, 24))
-            head_x = x + unit.direction * 28
-            pygame.draw.polygon(screen, mount, [(head_x - unit.direction * 8, y - 11 + bob),
-                                (head_x + unit.direction * 11, y - 19 + bob),
-                                (head_x + unit.direction * 16, y - 7 + bob), (head_x, y + 2 + bob)])
-            pygame.draw.polygon(screen, dark, [(head_x - unit.direction * 2, y - 17 + bob),
-                                (head_x, y - 28 + bob), (head_x + unit.direction * 7, y - 18 + bob)])
-            for offset, motion in ((-17, stride), (-4, -stride), (11, -stride), (21, stride)):
-                pygame.draw.line(screen, mount, (x + offset, y + 5 + bob),
-                                 (x + offset + motion, y + 19), 5)
-            pygame.draw.circle(screen, (220, 76, 31) if mordor else (28, 28, 26),
-                               (head_x + unit.direction * 8, y - 11 + bob), 2)
-        elif unit.kind.key == "olog_hai":
-            pygame.draw.line(screen, (91, 65, 43), (x - unit.direction * 18, y - 34),
-                             (x - unit.direction * 28, y + 8), 9)
-        # Legs and body.
-        pygame.draw.line(screen, dark, (x - 5, y + bob), (x - 7 - stride, y + 19), 6)
-        pygame.draw.line(screen, dark, (x + 5, y + bob), (x + 7 + stride, y + 19), 6)
-        pygame.draw.line(screen, (22, 22, 20), (x - 12 - stride, y + 19),
-                         (x - 4 - stride, y + 19), 4)
-        pygame.draw.line(screen, (22, 22, 20), (x + 4 + stride, y + 19),
-                         (x + 12 + stride, y + 19), 4)
-        if unit.kind.key in ("gondor_ranger", "gondor_archer"):
-            cloak = (45, 76, 53) if unit.kind.key == "gondor_ranger" else accent
-            pygame.draw.polygon(screen, cloak, [(x - 11, y - 29 + bob),
-                                (x - unit.direction * 15, y + 8), (x + 12, y + 5)])
-        pygame.draw.polygon(screen, body, [(x - size // 2, y - 26 + bob),
-                                            (x + size // 2, y - 26 + bob),
-                                            (x + size // 2 + 3, y + 5 + bob),
-                                            (x - size // 2 - 3, y + 5 + bob)])
-        pygame.draw.rect(screen, accent, (x - size // 2 - 2, y - 10 + bob, size + 4, 7))
-        pygame.draw.circle(screen, body, (x, y - 36 + bob), max(7, size // 2))
-        # Faction helmets and face slits sharpen silhouettes at gameplay scale.
-        if mordor:
-            pygame.draw.polygon(screen, dark, [(x - 10, y - 38 + bob), (x, y - 51 + bob),
-                                (x + 10, y - 38 + bob), (x + 7, y - 34 + bob),
-                                (x - 8, y - 34 + bob)])
-            pygame.draw.line(screen, (186, 64, 31), (x + unit.direction * 2, y - 36 + bob),
-                             (x + unit.direction * 7, y - 36 + bob), 2)
+        """Render a readable, equipment-rich model with a unique class silhouette."""
+        x, y, direction = int(unit.x), C.GROUND_Y, unit.direction
+        phase = time * (5.4 + unit.kind.speed / 24) + unit.id * 1.73
+        attacking = unit.attack_timer > unit.kind.attack_cooldown * .52
+        key = unit.kind.key
+        heights = {"warg_rider": 79, "gondor_knight": 84, "olog_hai": 88,
+                   "uruk": 73, "tower_guard": 82, "lurtz": 81, "boromir": 79}
+        height = heights.get(key, 68)
+        shadow_width = {"warg_rider": 76, "gondor_knight": 82,
+                        "olog_hai": 62}.get(key, 42 + unit.kind.size // 2)
+        pygame.draw.ellipse(screen, (19, 18, 16), (x - shadow_width // 2, y + 14,
+                                                  shadow_width, 10))
+
+        if key in ("warg_rider", "gondor_knight"):
+            self._draw_mounted_unit(screen, unit, x, y, direction, phase, attacking)
+        elif key == "olog_hai":
+            self._draw_olog(screen, unit, x, y, direction, phase, attacking)
         else:
-            pygame.draw.arc(screen, metal, (x - 10, y - 47 + bob, 20, 20), math.pi, math.tau, 5)
-            pygame.draw.line(screen, metal, (x + unit.direction * 7, y - 41 + bob),
-                             (x + unit.direction * 7, y - 30 + bob), 3)
-        if unit.kind.ranged:
-            bow_x = x + unit.direction * 14
-            pygame.draw.arc(screen, (126, 82, 43), (bow_x - 8, y - 40, 16, 35),
-                            -math.pi / 2, math.pi / 2, 2)
-            pygame.draw.line(screen, (193, 183, 154), (bow_x, y - 39), (bow_x, y - 6), 1)
-        else:
-            weapon_x = x + unit.direction * 15
-            attacking = unit.attack_timer > unit.kind.attack_cooldown * .55
-            tip_x = weapon_x + unit.direction * (24 if attacking else 13)
-            tip_y = y - 25 if attacking else y - 50
-            pygame.draw.line(screen, (111, 76, 44), (weapon_x, y - 28), (tip_x, tip_y), 3)
-            pygame.draw.line(screen, metal, (tip_x, tip_y),
-                             (tip_x + unit.direction * 5, tip_y - 10), 4)
-            if unit.kind.key in ("soldier", "boromir", "tower_guard"):
-                shield_x = x - unit.direction * 12
-                pygame.draw.circle(screen, dark, (shield_x, y - 15 + bob), 12)
-                pygame.draw.circle(screen, metal, (shield_x, y - 15 + bob), 11, 2)
-                pygame.draw.line(screen, accent, (shield_x, y - 23 + bob),
-                                 (shield_x, y - 7 + bob), 2)
-        if unit.kind.key in ("uruk", "tower_guard"):
-            pygame.draw.polygon(screen, accent, [(x - 12, y - 43 + bob), (x, y - 56 + bob),
-                                                  (x + 12, y - 43 + bob)])
-        if unit.kind.key == "gondor_ranger":
-            pygame.draw.polygon(screen, (48, 82, 55), [(x - 10, y - 39 + bob),
-                                                       (x, y - 52 + bob),
-                                                       (x + 10, y - 39 + bob)])
-        if unit.kind.is_hero:
-            pygame.draw.polygon(screen, (230, 175, 55), [(x, y - 76), (x + 5, y - 69),
-                                (x, y - 62), (x - 5, y - 69)])
+            self._draw_humanoid(screen, unit, x, y, direction, phase, attacking)
+
         ratio = float(unit.health) / unit.kind.max_health
         if ratio < .999 or unit.kind.is_hero:
-            width = 48 if unit.kind.is_hero else 38
-            self._bar(screen, pygame.Rect(x - width // 2, y - 65, width, 5), ratio,
-                      (174, 50, 38) if mordor else (218, 220, 210), border=False)
+            width = 52 if unit.kind.is_hero else max(38, unit.kind.size + 18)
+            bar_y = y - height - 10
+            self._bar(screen, pygame.Rect(x - width // 2, bar_y, width, 5), ratio,
+                      (183, 53, 35) if unit.faction == "mordor" else (224, 226, 211),
+                      border=False)
+            if unit.kind.is_hero:
+                pygame.draw.circle(screen, (225, 170, 57), (x - width // 2 - 4, bar_y + 2), 3)
+
+    @staticmethod
+    def _limb(screen: pygame.Surface, color, start, joint, end, width: int) -> None:
+        """Draw a jointed limb with round connections rather than a stick line."""
+        pygame.draw.line(screen, (24, 23, 21), start, joint, width + 3)
+        pygame.draw.line(screen, (24, 23, 21), joint, end, width + 3)
+        pygame.draw.line(screen, color, start, joint, width)
+        pygame.draw.line(screen, color, joint, end, width)
+        pygame.draw.circle(screen, color, joint, max(2, width // 2))
+
+    @staticmethod
+    def _draw_sword(screen: pygame.Surface, hand, tip, metal, broad: bool = False) -> None:
+        hx, hy = hand
+        tx, ty = tip
+        pygame.draw.line(screen, (104, 67, 39), (hx, hy), (hx + (tx - hx) * .18, hy + (ty - hy) * .18), 4)
+        pygame.draw.line(screen, (54, 48, 40), (hx - 4, hy - 2), (hx + 5, hy + 3), 3)
+        pygame.draw.line(screen, (36, 36, 34), (hx, hy), (tx, ty), 7 if broad else 5)
+        pygame.draw.line(screen, metal, (hx, hy), (tx, ty), 4 if broad else 2)
+        pygame.draw.circle(screen, (189, 143, 57), (hx, hy), 2)
+
+    @staticmethod
+    def _draw_bow(screen: pygame.Surface, hand, direction: int, drawn: bool,
+                  longbow: bool = False) -> None:
+        hx, hy = hand
+        radius = 23 if longbow else 19
+        bow_x = hx + direction * (7 if drawn else 3)
+        rect = pygame.Rect(bow_x - radius // 2, hy - radius, radius, radius * 2)
+        if direction > 0:
+            pygame.draw.arc(screen, (151, 102, 52), rect, -math.pi / 2, math.pi / 2, 3)
+        else:
+            pygame.draw.arc(screen, (151, 102, 52), rect, math.pi / 2, math.pi * 1.5, 3)
+        string_x = hx - direction * (8 if drawn else 0)
+        pygame.draw.line(screen, (211, 203, 174), (bow_x, hy - radius), (string_x, hy), 1)
+        pygame.draw.line(screen, (211, 203, 174), (string_x, hy), (bow_x, hy + radius), 1)
+        if drawn:
+            pygame.draw.line(screen, (83, 58, 37), (string_x, hy),
+                             (bow_x + direction * 17, hy), 2)
+
+    @staticmethod
+    def _draw_shield(screen: pygame.Surface, x: int, y: int, style: str,
+                     face, rim, emblem) -> None:
+        if style == "tower":
+            points = [(x - 10, y - 17), (x + 10, y - 17), (x + 9, y + 11),
+                      (x, y + 19), (x - 9, y + 11)]
+            pygame.draw.polygon(screen, (25, 27, 27), points)
+            pygame.draw.polygon(screen, face, points)
+            pygame.draw.lines(screen, rim, True, points, 2)
+        elif style == "kite":
+            points = [(x, y - 16), (x + 13, y - 8), (x + 9, y + 13),
+                      (x, y + 21), (x - 9, y + 13), (x - 13, y - 8)]
+            pygame.draw.polygon(screen, face, points)
+            pygame.draw.lines(screen, rim, True, points, 2)
+        else:
+            pygame.draw.circle(screen, (25, 27, 27), (x + 1, y + 2), 15)
+            pygame.draw.circle(screen, face, (x, y), 14)
+            pygame.draw.circle(screen, rim, (x, y), 14, 2)
+        pygame.draw.line(screen, emblem, (x, y - 8), (x, y + 9), 2)
+        pygame.draw.line(screen, emblem, (x - 5, y - 1), (x + 5, y - 1), 1)
+
+    def _draw_humanoid(self, screen: pygame.Surface, unit: Unit, x: int, y: int,
+                       d: int, phase: float, attacking: bool) -> None:
+        key = unit.kind.key
+        mordor = unit.faction == "mordor"
+        heavy = key in ("uruk", "tower_guard")
+        hero = unit.kind.is_hero
+        bob = int(math.sin(phase * 2) * (1 if heavy else 2))
+        stride = int(math.sin(phase) * (3 if heavy else 5))
+        if attacking:
+            stride = -d * 2
+        base_y = y + bob
+
+        skin = (91, 99, 67) if mordor else (204, 174, 142)
+        leather = (61, 47, 35) if mordor else (78, 65, 51)
+        dark = (37, 35, 32) if mordor else (43, 50, 54)
+        metal = (119, 117, 103) if mordor else (207, 212, 207)
+        bright = (165, 157, 132) if mordor else (239, 239, 221)
+        cloth = (126, 43, 31) if mordor else (42, 62, 83)
+        if key == "gondor_ranger":
+            cloth, leather = (42, 72, 49), (70, 57, 40)
+        elif key == "gondor_archer":
+            cloth = (64, 79, 89)
+        elif key == "lurtz":
+            skin, cloth, metal = (105, 100, 70), (87, 35, 27), (138, 130, 108)
+        elif key == "boromir":
+            cloth, metal, bright = (101, 47, 37), (211, 207, 188), (239, 223, 177)
+        if unit.flash_timer > 0:
+            skin = cloth = metal = bright = (255, 238, 213)
+
+        # Cloaks and quivers sit behind the body and establish the broad silhouette.
+        if key in ("gondor_ranger", "gondor_archer", "tower_guard", "boromir", "lurtz"):
+            cloak = {"gondor_ranger": (37, 68, 45), "gondor_archer": (45, 61, 69),
+                     "tower_guard": (25, 31, 37), "boromir": (102, 43, 34),
+                     "lurtz": (55, 37, 29)}[key]
+            flutter = int(math.sin(phase + .8) * 3)
+            pygame.draw.polygon(screen, (25, 25, 23), [(x - d * 7, base_y - 48),
+                                (x - d * (18 + flutter), base_y + 5), (x + d * 7, base_y + 2)])
+            pygame.draw.polygon(screen, cloak, [(x - d * 6, base_y - 47),
+                                (x - d * (15 + flutter), base_y + 3), (x + d * 7, base_y)])
+        if unit.kind.ranged:
+            qx = x - d * 11
+            pygame.draw.line(screen, (70, 48, 31), (qx, base_y - 42), (qx - d * 3, base_y - 4), 6)
+            for offset in (-3, 1, 5):
+                pygame.draw.line(screen, (116, 78, 40), (qx + offset, base_y - 44),
+                                 (qx + offset + d * 3, base_y - 55), 2)
+                pygame.draw.polygon(screen, (136, 123, 88), [(qx + offset + d * 3, base_y - 57),
+                                    (qx + offset, base_y - 53), (qx + offset + d * 6, base_y - 52)])
+
+        # Articulated legs, armored boots, and a split tunic avoid the old block body.
+        leg_color = dark if heavy else leather
+        self._limb(screen, leg_color, (x - 6, base_y - 5), (x - 6 - stride // 2, base_y + 8),
+                   (x - 7 - stride, y + 17), 6 if heavy else 5)
+        self._limb(screen, leg_color, (x + 6, base_y - 5), (x + 6 + stride // 2, base_y + 8),
+                   (x + 7 + stride, y + 17), 6 if heavy else 5)
+        pygame.draw.line(screen, (24, 24, 22), (x - 8 - stride, y + 17),
+                         (x - 15 - stride * d // 2, y + 18), 5)
+        pygame.draw.line(screen, (24, 24, 22), (x + 8 + stride, y + 17),
+                         (x + 15 + stride * d // 2, y + 18), 5)
+
+        shoulder = 17 if heavy or hero else 13
+        pygame.draw.polygon(screen, dark, [(x - shoulder, base_y - 43), (x - 10, base_y - 52),
+                            (x + 10, base_y - 52), (x + shoulder, base_y - 43),
+                            (x + 11, base_y - 9), (x, base_y - 3), (x - 11, base_y - 9)])
+        pygame.draw.polygon(screen, cloth, [(x - 10, base_y - 43), (x, base_y - 49),
+                            (x + 10, base_y - 43), (x + 9, base_y - 13),
+                            (x, base_y - 7), (x - 9, base_y - 13)])
+        # Mail/plate panels, belt, shoulder armor, and faction heraldry.
+        if heavy or key in ("soldier", "boromir", "lurtz"):
+            pygame.draw.polygon(screen, metal, [(x - 10, base_y - 43), (x, base_y - 47),
+                                (x + 10, base_y - 43), (x + 8, base_y - 22),
+                                (x, base_y - 17), (x - 8, base_y - 22)])
+            for mail_y in range(base_y - 37, base_y - 20, 5):
+                pygame.draw.line(screen, dark, (x - 7, mail_y), (x + 7, mail_y), 1)
+        pygame.draw.rect(screen, leather, (x - 12, base_y - 17, 24, 5))
+        pygame.draw.circle(screen, (193, 143, 52), (x, base_y - 15), 2)
+        if heavy:
+            pygame.draw.ellipse(screen, metal, (x - 21, base_y - 49, 14, 10))
+            pygame.draw.ellipse(screen, metal, (x + 7, base_y - 49, 14, 10))
+
+        # Head, hair/hood, and helmets use profiles rather than featureless circles.
+        head_y = base_y - 59
+        pygame.draw.ellipse(screen, (30, 28, 25), (x - 8, head_y - 8, 18, 21))
+        pygame.draw.ellipse(screen, skin, (x - 7, head_y - 8, 15, 18))
+        pygame.draw.polygon(screen, skin, [(x + d * 6, head_y - 3),
+                            (x + d * 11, head_y + 1), (x + d * 6, head_y + 3)])
+        if key == "gondor_ranger":
+            pygame.draw.polygon(screen, (35, 65, 43), [(x - 12, head_y + 5),
+                                (x, head_y - 17), (x + 12, head_y + 5), (x + 8, head_y + 12),
+                                (x - 8, head_y + 12)])
+            pygame.draw.ellipse(screen, (20, 29, 22), (x - 7, head_y - 5, 14, 13), 2)
+        elif key in ("lurtz", "boromir"):
+            hair = (31, 27, 23) if key == "lurtz" else (91, 67, 43)
+            pygame.draw.arc(screen, hair, (x - 10, head_y - 12, 20, 24), math.pi, math.tau, 7)
+            pygame.draw.line(screen, hair, (x - d * 7, head_y - 5), (x - d * 10, head_y + 10), 4)
+        elif mordor:
+            crest = 12 if key == "uruk" else 7
+            pygame.draw.polygon(screen, dark, [(x - 10, head_y + 2), (x - 5, head_y - 10),
+                                (x, head_y - 10 - crest), (x + 9, head_y - 6),
+                                (x + 10, head_y + 7), (x - 8, head_y + 8)])
+            pygame.draw.line(screen, (168, 56, 36), (x + d * 2, head_y), (x + d * 7, head_y), 2)
+        else:
+            pygame.draw.arc(screen, metal, (x - 10, head_y - 12, 20, 21), math.pi, math.tau, 6)
+            pygame.draw.line(screen, metal, (x - 9, head_y - 2), (x - 8, head_y + 9), 4)
+            pygame.draw.line(screen, metal, (x + 9, head_y - 2), (x + 8, head_y + 9), 4)
+            pygame.draw.line(screen, bright, (x + d * 7, head_y - 4), (x + d * 7, head_y + 7), 2)
+            if key == "tower_guard":
+                pygame.draw.polygon(screen, bright, [(x - 3, head_y - 10), (x, head_y - 25),
+                                    (x + 4, head_y - 10)])
+
+        hand_y = base_y - 30
+        if unit.kind.ranged:
+            front_hand = (x + d * 16, hand_y)
+            rear_hand = (x - d * (8 if attacking else 1), hand_y)
+            self._limb(screen, leather, (x + d * 8, base_y - 43),
+                       (x + d * 13, hand_y - 5), front_hand, 5)
+            self._limb(screen, leather, (x - d * 8, base_y - 42),
+                       (x - d * 11, hand_y - 3), rear_hand, 5)
+            self._draw_bow(screen, front_hand, d, attacking, key in ("gondor_ranger", "lurtz"))
+        elif key == "tower_guard":
+            hand = (x + d * 10, hand_y)
+            self._limb(screen, metal, (x + d * 9, base_y - 43),
+                       (x + d * 13, hand_y - 5), hand, 6)
+            spear_top = (x + d * (27 if attacking else 15), base_y - (34 if attacking else 83))
+            spear_bottom = (x - d * 9, base_y + 8)
+            pygame.draw.line(screen, (99, 70, 43), spear_bottom, spear_top, 4)
+            pygame.draw.polygon(screen, bright, [spear_top,
+                                (spear_top[0] - d * 5, spear_top[1] + 12),
+                                (spear_top[0] + d * 3, spear_top[1] + 9)])
+            self._draw_shield(screen, x - d * 13, base_y - 23, "tower",
+                              (36, 42, 48), bright, (218, 218, 199))
+        else:
+            front_hand = (x + d * 15, hand_y + (4 if attacking else 0))
+            elbow = (x + d * (18 if attacking else 12), base_y - (39 if attacking else 31))
+            self._limb(screen, metal if heavy else leather, (x + d * 9, base_y - 43),
+                       elbow, front_hand, 6 if heavy else 5)
+            tip = (x + d * (43 if attacking else 27),
+                   base_y - (31 if attacking else 68))
+            self._draw_sword(screen, front_hand, tip, bright, key in ("uruk", "lurtz"))
+            if key in ("soldier", "boromir"):
+                style = "round" if key == "boromir" else "kite"
+                face = (71, 79, 83) if key == "soldier" else (116, 45, 36)
+                self._draw_shield(screen, x - d * 14, base_y - 25, style,
+                                  face, bright, (225, 222, 197))
+            elif key == "orc":
+                self._draw_shield(screen, x - d * 13, base_y - 23, "round",
+                                  (73, 48, 35), metal, (151, 48, 30))
+
+        if hero:
+            # A grounded gold standard behind the shoulders reads as rank without a floating icon.
+            standard_x = x - d * 18
+            pygame.draw.line(screen, (119, 78, 38), (standard_x, base_y - 8),
+                             (standard_x, base_y - 79), 2)
+            pygame.draw.polygon(screen, (190, 132, 39), [(standard_x, base_y - 77),
+                                (standard_x + d * 14, base_y - 71),
+                                (standard_x, base_y - 64)])
+            if key == "boromir":
+                pygame.draw.arc(screen, (208, 180, 103),
+                                (x - d * 19 - 6, base_y - 42, 12, 22), 0, math.tau, 3)
+
+    def _draw_mounted_unit(self, screen: pygame.Surface, unit: Unit, x: int, y: int,
+                           d: int, phase: float, attacking: bool) -> None:
+        warg = unit.kind.key == "warg_rider"
+        bob = int(math.sin(phase * 2) * 2)
+        gallop = int(math.sin(phase) * 8)
+        body = (62, 52, 43) if warg else (157, 161, 157)
+        shade = (35, 32, 29) if warg else (86, 94, 94)
+        light = (92, 78, 58) if warg else (205, 207, 198)
+        armor = (72, 66, 57) if warg else (194, 200, 198)
+        if unit.flash_timer > 0:
+            body = light = armor = (255, 238, 213)
+
+        # Four articulated legs are widely spaced so the mount reads at gameplay scale.
+        for ox, motion in ((-24, gallop), (-9, -gallop), (12, -gallop), (25, gallop)):
+            knee = (x + ox + motion // 3, y + 3 + bob)
+            hoof = (x + ox + motion, y + 18)
+            self._limb(screen, shade, (x + ox, y - 8 + bob), knee, hoof, 6 if warg else 5)
+            pygame.draw.line(screen, (25, 25, 23), hoof, (hoof[0] + d * 5, hoof[1]), 4)
+        pygame.draw.ellipse(screen, shade, (x - 33, y - 25 + bob, 65, 31))
+        pygame.draw.ellipse(screen, body, (x - 31, y - 27 + bob, 62, 28))
+        pygame.draw.polygon(screen, light, [(x - 21, y - 25 + bob), (x + 20, y - 25 + bob),
+                            (x + 28, y - 13 + bob), (x - 27, y - 13 + bob)])
+
+        neck_x = x + d * 28
+        if warg:
+            pygame.draw.polygon(screen, shade, [(neck_x - d * 9, y - 22 + bob),
+                                (neck_x + d * 7, y - 39 + bob), (neck_x + d * 17, y - 26 + bob),
+                                (neck_x + d * 10, y - 10 + bob)])
+            muzzle = (neck_x + d * 18, y - 25 + bob)
+            pygame.draw.polygon(screen, body, [(neck_x, y - 34 + bob), muzzle,
+                                (neck_x + d * 23, y - 17 + bob), (neck_x - d * 2, y - 17 + bob)])
+            pygame.draw.polygon(screen, shade, [(neck_x - d * 2, y - 34 + bob),
+                                (neck_x, y - 47 + bob), (neck_x + d * 7, y - 35 + bob)])
+            pygame.draw.polygon(screen, (222, 210, 172), [(neck_x + d * 18, y - 18 + bob),
+                                (neck_x + d * 22, y - 13 + bob), (neck_x + d * 14, y - 16 + bob)])
+            pygame.draw.circle(screen, (222, 69, 30), (neck_x + d * 9, y - 29 + bob), 2)
+            # Ragged tail.
+            pygame.draw.line(screen, shade, (x - d * 30, y - 20 + bob),
+                             (x - d * 47, y - 31 + gallop // 3), 6)
+        else:
+            pygame.draw.polygon(screen, body, [(neck_x - d * 10, y - 22 + bob),
+                                (neck_x + d * 2, y - 47 + bob), (neck_x + d * 13, y - 43 + bob),
+                                (neck_x + d * 16, y - 24 + bob), (neck_x + d * 5, y - 12 + bob)])
+            pygame.draw.polygon(screen, body, [(neck_x + d * 4, y - 45 + bob),
+                                (neck_x + d * 19, y - 48 + bob), (neck_x + d * 23, y - 42 + bob),
+                                (neck_x + d * 11, y - 36 + bob)])
+            pygame.draw.polygon(screen, shade, [(neck_x, y - 46 + bob),
+                                (neck_x - d * 3, y - 58 + bob), (neck_x + d * 5, y - 48 + bob)])
+            pygame.draw.circle(screen, (25, 25, 23), (neck_x + d * 13, y - 44 + bob), 2)
+            pygame.draw.line(screen, shade, (x - d * 30, y - 23 + bob),
+                             (x - d * 44, y - 4 + gallop // 4), 5)
+        # Barding and saddle separate the rider from the animal.
+        barding = (105, 39, 30) if warg else (43, 59, 77)
+        pygame.draw.polygon(screen, barding, [(x - 19, y - 27 + bob), (x + 17, y - 27 + bob),
+                            (x + 20, y - 6 + bob), (x - 17, y - 7 + bob)])
+        pygame.draw.rect(screen, (72, 48, 34), (x - 15, y - 32 + bob, 30, 8))
+        pygame.draw.line(screen, (72, 48, 34), (x, y - 28 + bob), (x + d * 11, y - 6 + bob), 3)
+
+        rider_y = y - 31 + bob
+        skin = (87, 94, 64) if warg else (201, 171, 139)
+        rider_metal = (111, 107, 94) if warg else (217, 221, 214)
+        rider_dark = (38, 35, 31) if warg else (39, 47, 53)
+        pygame.draw.polygon(screen, rider_dark, [(x - 13, rider_y - 27), (x, rider_y - 34),
+                            (x + 13, rider_y - 27), (x + 10, rider_y), (x - 10, rider_y)])
+        pygame.draw.polygon(screen, rider_metal, [(x - 10, rider_y - 27), (x, rider_y - 31),
+                            (x + 10, rider_y - 27), (x + 7, rider_y - 7), (x - 7, rider_y - 7)])
+        pygame.draw.ellipse(screen, skin, (x - 7, rider_y - 46, 15, 17))
+        if warg:
+            pygame.draw.polygon(screen, rider_dark, [(x - 9, rider_y - 39), (x, rider_y - 56),
+                                (x + 9, rider_y - 39), (x + 7, rider_y - 33), (x - 8, rider_y - 33)])
+            hand = (x + d * 13, rider_y - 20)
+            tip = (x + d * (45 if attacking else 29), rider_y - (18 if attacking else 55))
+            self._draw_sword(screen, hand, tip, (154, 148, 127), True)
+        else:
+            pygame.draw.arc(screen, rider_metal, (x - 9, rider_y - 50, 18, 18), math.pi, math.tau, 6)
+            pygame.draw.line(screen, rider_metal, (x + d * 7, rider_y - 42),
+                             (x + d * 7, rider_y - 32), 3)
+            hand = (x + d * 12, rider_y - 20)
+            lance_tip = (x + d * (61 if attacking else 33), rider_y - (18 if attacking else 69))
+            pygame.draw.line(screen, (104, 73, 43), (x - d * 13, rider_y + 3), lance_tip, 4)
+            pygame.draw.polygon(screen, (231, 231, 215), [lance_tip,
+                                (lance_tip[0] - d * 8, lance_tip[1] + 12),
+                                (lance_tip[0] + d * 3, lance_tip[1] + 9)])
+            self._draw_shield(screen, x - d * 13, rider_y - 17, "kite",
+                              (45, 58, 72), rider_metal, (230, 228, 207))
+
+    def _draw_olog(self, screen: pygame.Surface, unit: Unit, x: int, y: int,
+                   d: int, phase: float, attacking: bool) -> None:
+        bob = int(math.sin(phase) * 1.5)
+        skin = (91, 96, 69)
+        dark_skin = (60, 66, 51)
+        armor = (75, 69, 59)
+        metal = (126, 119, 99)
+        if unit.flash_timer > 0:
+            skin = dark_skin = armor = metal = (255, 238, 213)
+        base_y = y + bob
+        # Massive bent legs and long knuckle-dragging arms define troll proportions.
+        self._limb(screen, dark_skin, (x - 12, base_y - 18), (x - 17, base_y + 1),
+                   (x - 20, y + 16), 12)
+        self._limb(screen, dark_skin, (x + 12, base_y - 18), (x + 17, base_y + 1),
+                   (x + 20, y + 16), 12)
+        pygame.draw.line(screen, (27, 27, 24), (x - 25, y + 17), (x - 9, y + 17), 7)
+        pygame.draw.line(screen, (27, 27, 24), (x + 9, y + 17), (x + 27, y + 17), 7)
+        pygame.draw.ellipse(screen, dark_skin, (x - 29, base_y - 67, 58, 56))
+        pygame.draw.polygon(screen, skin, [(x - 25, base_y - 58), (x - 14, base_y - 73),
+                            (x + 15, base_y - 71), (x + 27, base_y - 48),
+                            (x + 18, base_y - 17), (x - 18, base_y - 17)])
+        pygame.draw.polygon(screen, armor, [(x - 27, base_y - 57), (x - 9, base_y - 70),
+                            (x + 4, base_y - 65), (x + 22, base_y - 54),
+                            (x + 13, base_y - 32), (x - 18, base_y - 34)])
+        pygame.draw.lines(screen, metal, False, [(x - 20, base_y - 52),
+                          (x + 13, base_y - 43), (x - 12, base_y - 35)], 4)
+        pygame.draw.ellipse(screen, skin, (x - 11 + d * 3, base_y - 83, 24, 22))
+        pygame.draw.polygon(screen, armor, [(x - 11, base_y - 74), (x - 7, base_y - 88),
+                            (x + 11, base_y - 84), (x + 14, base_y - 71)])
+        pygame.draw.circle(screen, (196, 70, 32), (x + d * 8, base_y - 76), 2)
+        rear_hand = (x - d * 32, base_y - 6)
+        self._limb(screen, skin, (x - d * 20, base_y - 55),
+                   (x - d * 29, base_y - 31), rear_hand, 11)
+        front_hand = (x + d * 31, base_y - (31 if attacking else 9))
+        self._limb(screen, skin, (x + d * 20, base_y - 55),
+                   (x + d * 30, base_y - 35), front_hand, 12)
+        club_tip = (x + d * (58 if attacking else 43),
+                    base_y - (28 if attacking else 63))
+        pygame.draw.line(screen, (61, 43, 30), rear_hand, club_tip, 11)
+        pygame.draw.line(screen, (111, 73, 40), rear_hand, club_tip, 6)
+        pygame.draw.circle(screen, (66, 57, 47), club_tip, 10)
+        for angle in (-8, 0, 8):
+            pygame.draw.line(screen, metal, club_tip,
+                             (club_tip[0] + d * 12, club_tip[1] + angle), 3)
 
     def _draw_projectile(self, screen: pygame.Surface, projectile) -> None:
         color = (236, 104, 36) if projectile.faction == "mordor" else (225, 225, 202)
         x = int(projectile.x)
         direction = 1 if projectile.faction == "mordor" else -1
-        pygame.draw.line(screen, (51, 39, 30), (x - direction * 13, 450),
-                         (x + direction * 10, 446), 2)
-        pygame.draw.polygon(screen, color, [(x + direction * 14, 445),
-                            (x + direction * 8, 441), (x + direction * 9, 449)])
+        pygame.draw.line(screen, (51, 39, 30), (x - direction * 15, 456),
+                         (x + direction * 11, 452), 2)
+        pygame.draw.line(screen, (166, 145, 104), (x - direction * 14, 456),
+                         (x - direction * 19, 451), 1)
+        pygame.draw.polygon(screen, color, [(x + direction * 16, 451),
+                            (x + direction * 9, 447), (x + direction * 10, 455)])
 
     def _draw_hud(self, screen: pygame.Surface, game) -> None:
         panel = pygame.Surface((C.SCREEN_WIDTH, 120), pygame.SRCALPHA)
@@ -368,6 +651,7 @@ class Renderer:
             self._coin(screen, rect.x + 14, rect.y + 68, 7)
             self._text(screen, str(kind.cost), self.small_font,
                        (230, 174, 64) if affordable else (126, 112, 79), rect.x + 27, rect.y + 58)
+            self._draw_card_portrait(screen, kind, rect.right - 20, rect.bottom - 8, affordable)
         pygame.draw.line(screen, (81, 66, 43), (906, 614), (906, 692), 1)
         self._coin(screen, 930, 632, 10)
         self._text(screen, f"{int(game.mordor.gold)}", self.medium_font, (236, 184, 67), 950, 619)
@@ -391,6 +675,49 @@ class Renderer:
         pygame.draw.circle(screen, (105, 67, 24), (x, y), radius + 1)
         pygame.draw.circle(screen, (225, 165, 54), (x, y), radius)
         pygame.draw.circle(screen, (248, 198, 84), (x - 2, y - 2), max(1, radius // 3))
+
+    @staticmethod
+    def _draw_card_portrait(screen: pygame.Surface, kind, x: int, y: int,
+                            enabled: bool) -> None:
+        """Add a compact roster silhouette without competing with card text."""
+        ink = (191, 149, 83) if enabled else (77, 81, 78)
+        shade = (58, 42, 31) if enabled else (42, 44, 43)
+        pygame.draw.ellipse(screen, (18, 17, 16), (x - 17, y - 3, 34, 5))
+        if kind.key == "warg_rider":
+            pygame.draw.ellipse(screen, shade, (x - 17, y - 14, 31, 11))
+            pygame.draw.polygon(screen, shade, [(x + 10, y - 13), (x + 18, y - 19),
+                                (x + 20, y - 9), (x + 13, y - 4)])
+            pygame.draw.line(screen, ink, (x - 9, y - 6), (x - 12, y), 3)
+            pygame.draw.line(screen, ink, (x + 7, y - 6), (x + 11, y), 3)
+            pygame.draw.circle(screen, ink, (x, y - 23), 4)
+            pygame.draw.polygon(screen, ink, [(x - 5, y - 20), (x + 5, y - 20),
+                                (x + 7, y - 10), (x - 7, y - 10)])
+        elif kind.key == "olog_hai":
+            pygame.draw.line(screen, shade, (x - 8, y - 14), (x - 12, y), 7)
+            pygame.draw.line(screen, shade, (x + 8, y - 14), (x + 12, y), 7)
+            pygame.draw.ellipse(screen, ink, (x - 13, y - 32, 26, 22))
+            pygame.draw.circle(screen, ink, (x + 3, y - 34), 6)
+            pygame.draw.line(screen, shade, (x + 11, y - 24), (x + 20, y - 4), 6)
+        else:
+            broad = kind.key in ("uruk", "lurtz")
+            half = 8 if broad else 6
+            pygame.draw.line(screen, shade, (x - 4, y - 10), (x - 7, y), 4)
+            pygame.draw.line(screen, shade, (x + 4, y - 10), (x + 7, y), 4)
+            pygame.draw.polygon(screen, ink, [(x - half, y - 26), (x, y - 30),
+                                (x + half, y - 26), (x + half + 2, y - 10),
+                                (x - half - 2, y - 10)])
+            pygame.draw.circle(screen, ink, (x, y - 34), 5)
+            if kind.ranged:
+                pygame.draw.arc(screen, ink, (x + 5, y - 31, 12, 25),
+                                -math.pi / 2, math.pi / 2, 2)
+                pygame.draw.line(screen, ink, (x + 11, y - 31), (x + 11, y - 7), 1)
+            else:
+                pygame.draw.line(screen, ink, (x + 7, y - 21), (x + 16, y - 39), 3)
+            if kind.is_hero:
+                pygame.draw.line(screen, (221, 169, 56), (x - 11, y - 9),
+                                 (x - 11, y - 42), 2)
+                pygame.draw.polygon(screen, (221, 169, 56), [(x - 11, y - 41),
+                                    (x - 2, y - 37), (x - 11, y - 32)])
 
     @staticmethod
     def _helmet(screen: pygame.Surface, x: int, y: int) -> None:
