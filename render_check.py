@@ -32,6 +32,12 @@ def main() -> int:
         game.spawn(kind.key, 1030 - index * 70)
     renderer.draw_game(screen, game)
     pygame.image.save(screen, output / "battle.png")
+    game.mordor.base_health = C.BASE_MAX_HEALTH * 0.35
+    game.gondor.base_health = C.BASE_MAX_HEALTH * 0.35
+    renderer.draw_game(screen, game)
+    pygame.image.save(screen, output / "damaged_bases.png")
+    game.mordor.base_health = C.BASE_MAX_HEALTH
+    game.gondor.base_health = C.BASE_MAX_HEALTH
     renderer.draw_game(screen, game, paused=True)
     pygame.image.save(screen, output / "pause.png")
     renderer.draw_game(screen, game, show_help=True)
@@ -43,7 +49,8 @@ def main() -> int:
     renderer.draw_game(screen, game)
     pygame.image.save(screen, output / "defeat.png")
 
-    expected = {"title.png", "battle.png", "pause.png", "help.png", "victory.png", "defeat.png"}
+    expected = {"title.png", "battle.png", "damaged_bases.png", "pause.png", "help.png",
+                "victory.png", "defeat.png"}
     actual = {path.name for path in output.glob("*.png") if path.stat().st_size > 10_000}
     pygame.quit()
     if not expected <= actual:
