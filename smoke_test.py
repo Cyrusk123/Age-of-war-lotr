@@ -7,15 +7,20 @@ from lotr_war.simulation import GameSimulation
 
 def main() -> int:
     game = GameSimulation(seed=17)
-    keys = ("orc", "orc_archer", "orc", "uruk")
+    keys = ("orc", "orc_archer", "warg_rider", "uruk", "olog_hai", "lurtz")
     next_order = 0.0
     order_index = 0
     dt = 1 / 30
     max_seconds = 360
     for frame in range(max_seconds * 30):
         if game.elapsed >= next_order:
-            if game.recruit("mordor", keys[order_index % len(keys)]):
+            attempts = 0
+            while attempts < len(keys):
+                key = keys[order_index % len(keys)]
                 order_index += 1
+                attempts += 1
+                if game.recruit("mordor", key):
+                    break
             next_order = game.elapsed + 1.25
         game.update(dt)
         if game.state != "playing":

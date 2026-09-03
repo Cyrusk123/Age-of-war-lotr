@@ -39,6 +39,8 @@ class GameSimulation:
         if not kind or kind.faction != faction:
             return False, "Unit unavailable"
         army = self.army(faction)
+        if kind.is_hero and any(unit.kind.key == key for unit in self.units):
+            return False, f"{kind.name} is already deployed"
         if self.population(faction) >= C.POPULATION_CAP:
             return False, "Population limit reached"
         if army.gold < kind.cost:

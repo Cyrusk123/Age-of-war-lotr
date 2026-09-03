@@ -37,6 +37,23 @@ class EconomyTests(unittest.TestCase):
             game_b.update(0.05)
         self.assertAlmostEqual(game_a.mordor.gold, game_b.mordor.gold, places=5)
 
+    def test_first_era_rosters_have_five_units_and_one_hero(self):
+        self.assertEqual(len(C.MORDOR_UNITS), 5)
+        self.assertEqual(len(C.GONDOR_UNITS), 5)
+        self.assertEqual([hero.name for hero in C.MORDOR_HEROES], ["Lurtz"])
+        self.assertEqual([hero.name for hero in C.GONDOR_HEROES], ["Boromir"])
+        self.assertTrue(all(hero.era == 1 and hero.is_hero
+                            for hero in C.MORDOR_HEROES + C.GONDOR_HEROES))
+
+    def test_only_one_copy_of_a_hero_can_be_alive(self):
+        self.game.mordor.gold = 1_000
+        self.assertTrue(self.game.recruit("mordor", "lurtz"))
+        self.assertFalse(self.game.recruit("mordor", "lurtz"))
+        self.assertEqual(self.game.message, "Lurtz is already deployed")
+        self.game.units[0].health = 0
+        self.game.update(0.01)
+        self.assertTrue(self.game.recruit("mordor", "lurtz"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,7 +12,7 @@ from .models import Unit
 
 
 class Renderer:
-    CARD_RECTS = [pygame.Rect(28 + i * 190, 610, 174, 88) for i in range(3)]
+    CARD_RECTS = [pygame.Rect(14 + i * 148, 610, 140, 88) for i in range(6)]
 
     def __init__(self) -> None:
         self.title_font = pygame.font.SysFont("georgia", 46, bold=True)
@@ -88,7 +88,7 @@ class Renderer:
                      self.small_font, (214, 214, 202), 405)
         glow = int(180 + math.sin(pulse * 3) * 60)
         self._center(screen, "PRESS ENTER TO BEGIN", self.medium_font, (glow, glow, 150), 480)
-        self._center(screen, "1–3 recruit units  •  Mouse selects cards  •  P pauses  •  F1 help",
+        self._center(screen, "1–6 recruit units  •  Mouse selects cards  •  P pauses  •  F1 help",
                      self.small_font, (164, 169, 164), 535)
         self._center(screen, "A fan-made gameplay prototype with original procedural artwork",
                      self.tiny_font, (125, 128, 125), 674)
@@ -127,9 +127,19 @@ class Renderer:
         mordor = unit.faction == "mordor"
         body = (83, 94, 65) if mordor else (201, 204, 201)
         accent = (151, 48, 30) if mordor else (52, 75, 101)
+        if unit.kind.is_hero:
+            body = (108, 91, 65) if mordor else (225, 220, 201)
+            accent = (225, 164, 48)
         if unit.flash_timer > 0:
             body = (255, 235, 210)
         pygame.draw.ellipse(screen, (30, 27, 24), (x - size, y + 17, size * 2, 8))
+        if unit.kind.key in ("warg_rider", "gondor_knight"):
+            mount = (65, 57, 48) if mordor else (151, 151, 145)
+            pygame.draw.ellipse(screen, mount, (x - size, y - 6 + bob, size * 2, 22))
+            pygame.draw.circle(screen, mount, (x + unit.direction * size, y - 5 + bob), 8)
+        elif unit.kind.key == "olog_hai":
+            pygame.draw.line(screen, (91, 65, 43), (x - unit.direction * 15, y - 30),
+                             (x - unit.direction * 24, y + 8), 7)
         # Legs and body.
         pygame.draw.line(screen, body, (x - 5, y + bob), (x - 7, y + 19), 5)
         pygame.draw.line(screen, body, (x + 5, y + bob), (x + 7, y + 19), 5)
@@ -151,6 +161,13 @@ class Renderer:
         if unit.kind.key in ("uruk", "tower_guard"):
             pygame.draw.polygon(screen, accent, [(x - 12, y - 43 + bob), (x, y - 56 + bob),
                                                   (x + 12, y - 43 + bob)])
+        if unit.kind.key == "gondor_ranger":
+            pygame.draw.polygon(screen, (48, 82, 55), [(x - 10, y - 39 + bob),
+                                                       (x, y - 52 + bob),
+                                                       (x + 10, y - 39 + bob)])
+        if unit.kind.is_hero:
+            pygame.draw.circle(screen, (230, 175, 55), (x, y - 36 + bob),
+                               max(10, size // 2 + 3), 2)
         self._bar(screen, pygame.Rect(x - 19, y - 65, 38, 5),
                   float(unit.health) / unit.kind.max_health,
                   (174, 50, 38) if mordor else (218, 220, 210), border=False)
@@ -165,20 +182,21 @@ class Renderer:
         panel.fill((13, 14, 15, 235))
         screen.blit(panel, (0, 600))
         pygame.draw.line(screen, (123, 94, 50), (0, 600), (C.SCREEN_WIDTH, 600), 2)
-        for i, (rect, kind) in enumerate(zip(self.CARD_RECTS, C.MORDOR_UNITS)):
+        for i, (rect, kind) in enumerate(zip(self.CARD_RECTS, C.MORDOR_ROSTER)):
             affordable, _ = game.can_recruit("mordor", kind.key)
             fill = (68, 50, 39) if affordable else (40, 40, 40)
             pygame.draw.rect(screen, fill, rect, border_radius=6)
             pygame.draw.rect(screen, (166, 119, 56) if affordable else (77, 77, 77), rect, 2, 6)
-            self._text(screen, f"[{i + 1}] {kind.name}", self.small_font,
-                       (235, 219, 185) if affordable else (125, 125, 125), rect.x + 10, rect.y + 9)
-            self._text(screen, f"{kind.cost} gold", self.small_font, (226, 170, 67), rect.x + 10, rect.y + 37)
-            role = "Ranged" if kind.ranged else ("Heavy" if kind.max_health > 200 else "Melee")
-            self._text(screen, role, self.tiny_font, (167, 170, 165), rect.x + 10, rect.y + 62)
-        self._text(screen, f"GOLD  {int(game.mordor.gold)}", self.medium_font, (233, 180, 62), 620, 620)
+            self._text(screen, f"[{i + 1}] {kind.name}", self.tiny_font,
+                       (235, 219, 185) if affordable else (125, 125, 125), rect.x + 7, rect.y + 9)
+            self._text(screen, f"{kind.cost} gold", self.small_font, (226, 170, 67), rect.x + 7, rect.y + 34)
+            role = f"ERA {kind.era} HERO" if kind.is_hero else (
+                "Ranged" if kind.ranged else ("Heavy" if kind.max_health > 200 else "Melee")
+            )
+            self._text(screen, role, self.tiny_font, (167, 170, 165), rect.x + 7, rect.y + 62)
+        self._text(screen, f"GOLD  {int(game.mordor.gold)}", self.medium_font, (233, 180, 62), 920, 620)
         self._text(screen, f"ARMY  {game.population('mordor')}/{C.POPULATION_CAP}",
-                   self.medium_font, (207, 207, 193), 620, 652)
-        self._text(screen, "RECRUITMENT  INSTANT", self.small_font, (168, 170, 163), 805, 623)
+                   self.medium_font, (207, 207, 193), 920, 652)
         minutes, seconds = divmod(int(game.elapsed), 60)
         self._text(screen, f"BATTLE {minutes:02}:{seconds:02}", self.small_font, (168, 170, 163), 1080, 655)
         if game.elapsed >= C.SIEGE_PRESSURE_START and game.state == "playing":
@@ -211,8 +229,9 @@ class Renderer:
             "Gold arrives over time and is awarded for fallen enemies.",
             "Orc Warriors are cheap frontline troops.",
             "Orc Archers attack safely behind your line.",
-            "Uruk-hai are slow, costly, and exceptionally durable.",
-            "Controls: 1 / 2 / 3 recruit  •  P or Esc pause  •  F1 closes help",
+            "Warg Riders are fast; Olog-hai are mighty siege troops.",
+            "Lurtz is an Era 1 hero; only one may fight at a time.",
+            "Controls: 1–6 recruit  •  P or Esc pause  •  F1 closes help",
         ]
         for i, line in enumerate(lines):
             self._center(screen, line, self.small_font, (207, 208, 198), 235 + i * 36)

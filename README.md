@@ -13,7 +13,7 @@ code at runtime; the repository does not contain external art or audio assets.
 - Automatic movement, target acquisition, melee attacks, ranged projectiles,
   formation spacing, deaths, and bounty rewards
 - Passive gold income, instant recruitment, costs, and 12-unit population cap
-- Three distinct units for each faction
+- Five distinct units and an Era 1 hero for each faction
 - Automated defensive towers and destructible 1,800-health fortresses
 - Gondor AI that responds to pressure and army composition
 - Title, battle, help, pause, victory, and defeat screens
@@ -39,9 +39,8 @@ python -m lotr_war
 | Input | Action |
 |---|---|
 | `Enter` or `Space` | Start from the title screen |
-| `1` | Train an Orc Warrior |
-| `2` | Train an Orc Archer |
-| `3` | Train an Uruk-hai |
+| `1`–`5` | Train one of Mordor's regular units |
+| `6` | Recruit Lurtz, Mordor's Era 1 hero |
 | Left mouse button | Select a recruitment card |
 | `P` or `Esc` | Pause/resume |
 | `F1` | Open/close the commander's guide |
@@ -56,6 +55,9 @@ python -m lotr_war
 | Orc Warrior | 60 | Cheap, quick frontline infantry |
 | Orc Archer | 95 | Fragile ranged support |
 | Uruk-hai | 170 | Slow, durable heavy infantry |
+| Warg Rider | 145 | Fast shock cavalry |
+| Olog-hai | 240 | Mighty siege infantry |
+| **Lurtz (Hero, Era 1)** | **380** | **Powerful unique ranged commander** |
 
 ### Gondor
 
@@ -64,6 +66,9 @@ python -m lotr_war
 | Gondor Soldier | 65 | Balanced frontline infantry |
 | Gondor Archer | 100 | Ranged counter to massed melee troops |
 | Tower Guard | 180 | Durable heavy defender |
+| Gondor Ranger | 135 | Elite long-range support |
+| Knight of Gondor | 225 | Fast, durable cavalry |
+| **Boromir (Hero, Era 1)** | **400** | **Powerful unique frontline commander** |
 
 ## Rules
 
@@ -72,7 +77,8 @@ spawns it at its faction's fortress with no training delay. Live troops count
 toward the population cap. Units advance and fight automatically. Killing an
 enemy awards its bounty. A fortress is attacked when a unit reaches the far
 edge of the lane. Reduce Gondor's fortress to zero health before Gondor
-destroys the Black Gate.
+destroys the Black Gate. Heroes also count toward the cap, and only one living
+copy of each hero can be deployed at once.
 
 After three minutes, **siege pressure** activates to prevent an indefinite
 midfield stalemate. Each surviving unit occupying enemy territory contributes
@@ -113,7 +119,7 @@ introduced.
 
 ## MVP limitations / possible next steps
 
-- Add heroes, abilities, upgrades, and age/technology progression
+- Add hero abilities, upgrades, and age/technology progression beyond Era 1
 - Add Rohan, Isengard, Elves, and Dwarves through a faction selection screen
 - Add animation and original sound/music
 - Add difficulty presets and campaign scenarios

@@ -28,6 +28,11 @@ class GondorAITests(unittest.TestCase):
         self.assertEqual(self.game.population("gondor"), 1)
         self.assertEqual(self.game.units[0].kind.faction, "gondor")
 
+    def test_ai_recruits_boromir_in_the_first_era(self):
+        self.game.elapsed = 45
+        self.game.gondor.gold = 500
+        self.assertEqual(self.ai.choose_unit(self.game), "boromir")
+
 
 if __name__ == "__main__":
     unittest.main()

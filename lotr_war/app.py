@@ -46,14 +46,21 @@ class GameApp:
                 self.reset()
                 return
             if self.screen_state == "battle" and not self.paused and not self.show_help:
-                keys = {pygame.K_1: "orc", pygame.K_2: "orc_archer", pygame.K_3: "uruk"}
+                keys = {
+                    pygame.K_1: "orc",
+                    pygame.K_2: "orc_archer",
+                    pygame.K_3: "uruk",
+                    pygame.K_4: "warg_rider",
+                    pygame.K_5: "olog_hai",
+                    pygame.K_6: "lurtz",
+                }
                 if event.key in keys:
                     self.game.recruit("mordor", keys[event.key])
         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                 and self.screen_state == "battle" and not self.paused and not self.show_help):
             index = self.renderer.card_at(event.pos)
             if index is not None:
-                self.game.recruit("mordor", C.MORDOR_UNITS[index].key)
+                self.game.recruit("mordor", C.MORDOR_ROSTER[index].key)
 
     def run(self) -> int:
         while self.running:

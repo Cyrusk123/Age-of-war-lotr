@@ -26,14 +26,10 @@ def main() -> int:
     pygame.image.save(screen, output / "title.png")
 
     game = GameSimulation(enable_ai=False)
-    game.spawn("orc", 420)
-    game.spawn("orc_archer", 350)
-    game.spawn("uruk", 280)
-    game.spawn("soldier", 610)
-    game.spawn("gondor_archer", 720)
-    game.spawn("tower_guard", 810)
-    for _ in range(90):
-        game.update(1 / 60)
+    for index, kind in enumerate(C.MORDOR_ROSTER):
+        game.spawn(kind.key, 230 + index * 70)
+    for index, kind in enumerate(C.GONDOR_ROSTER):
+        game.spawn(kind.key, 1030 - index * 70)
     renderer.draw_game(screen, game)
     pygame.image.save(screen, output / "battle.png")
     renderer.draw_game(screen, game, paused=True)
